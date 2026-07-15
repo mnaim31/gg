@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Prayer Times</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .prayer-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 380px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .header h2 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 24px;
+        }
+        .header p {
+            margin: 8px 0 0;
+            color: #7f8c8d;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .prayer-time {
+            display: flex;
+            justify-content: space-between;
+            padding: 14px 18px;
+            margin-bottom: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 16px;
+            color: #34495e;
+            border-left: 4px solid #2ecc71;
+            transition: transform 0.2s ease;
+        }
+        .prayer-time:hover {
+            transform: translateX(4px);
+            background: #f1f2f6;
+        }
+        .prayer-time span:last-child {
+            font-weight: bold;
+            color: #27ae60;
+        }
+        .loading {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="prayer-card">
+    <div class="header">
+        <h2>Prayer Times</h2>
+        <p id="location-date">Loading location...</p>
+    </div>
+    <div id="times-container">
+        <p class="loading">Fetching today's timings...</p>
+    </div>
+</div>
+
+<script>
+    // --- CONFIGURATION ---
+    // Change these values to get times for a different location
+    const city = 'Dhaka';
+    const country = 'Bangladesh';
+    
+    // API calculation methods: 
+    // 1 = University of Islamic Sciences, Karachi (common for South Asia)
+    // 2 = Islamic Society of North America (ISNA)
+    // 3 = Muslim World League (MWL)
+    // 4 = Umm Al-Qura University, Makkah
+    const method = 1; 
+    // ---------------------
+
+    const apiUrl = `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=${method}`;
+
+    async function fetchPrayerTimes() {
+        try {
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            
+            if (data.code === 200) {
+                const timings = data.data.timings;
+                const date = data.data.date.readable;
+                
+                // Update header
+                document.getElementById('location-date').innerText = `${city}, ${country} | ${date}`;
+                
+                // Define which prayers to show
+                const prayersToDisplay = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+                let htmlContent = '';
+                
+                // Generate HTML for each prayer
+                prayersToDisplay.forEach(prayer => {
+                    htmlContent += `
+                        <div class="prayer-time">
+                            <span>${prayer}</span>
+                            <span>${formatTime(timings[prayer])}</span>
+                        </div>
+                    `;
+                });
+                
+                // Inject into the DOM
+                document.getElementById('times-container').innerHTML = htmlContent;
+            } else {
+                document.getElementById('times-container').innerHTML = '<p class="loading">Error loading data.</p>';
+            }
+        } catch (error) {
+            console.error("Error fetching prayer times:", error);
+            document.getElementById('times-container').innerHTML = '<p class="loading">Failed to connect to the API. Check your internet connection.</p>';
+        }
+    }
+
+    // Helper function: Converts 24-hour time (e.g., "14:30") to 12-hour AM/PM format
+    function formatTime(time24) {
+        let [hours, minutes] = time24.split(':');
+        let period = 'AM';
+        hours = parseInt(hours, 10);
+        
+        if (hours >= 12) {
+            period = 'PM';
+            if (hours > 12) hours -= 12;
+        }
+        if (hours === 0) hours = 12;
+        
+        return `${hours}:${minutes} ${period}`;
+    }
+
+    // Initialize the fetch
+    fetchPrayerTimes();
+</script>
+
+</body>
+</html>
